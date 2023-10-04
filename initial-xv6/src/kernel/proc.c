@@ -108,7 +108,7 @@ static struct proc *
 allocproc(void)
 {
   struct proc *p;
-
+  
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
@@ -134,6 +134,12 @@ found:
     release(&p->lock);
     return 0;
   }
+  if((p->backup_trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
@@ -152,6 +158,11 @@ found:
   p->rtime = 0;
   p->etime = 0;
   p->ctime = ticks;
+  p->is_sigalarm = 0;
+  p->ticks = 0;
+  p->now_ticks = 0;
+  p->handler = 0;
+
   return p;
 }
 
@@ -161,11 +172,13 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  if (p->trapframe)
-    kfree((void *)p->trapframe);
+  if (p->backup_trapframe)
+    kfree((void *)p->backup_trapframe);
   p->trapframe = 0;
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if (p->backup_trapframe)
+    kfree((void *)p->backup_trapframe);
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -176,6 +189,23 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
 }
+
+uint64 sys_sigalarm(void){
+  int ticks;
+  argint(0, &ticks);
+    // return -1;
+  uint64 handler;
+  argaddr(1, &handler) ;
+    // return -1;
+  myproc()->is_sigalarm =0;
+  myproc()->ticks = ticks;
+  myproc()->now_ticks = 0;
+  myproc()->handler = handler;
+// *(  myproc()->backup_trapframe )=*( myproc()->trapframe);
+
+  return 0; 
+}
+
 
 // Create a user page table for a given process, with no user memory,
 // but with trampoline and trapframe pages.

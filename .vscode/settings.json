@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "stat.h": "c",
+        "user.h": "c",
+        "types.h": "c",
+        "fcntl.h": "c",
+        "sleeplock.h": "c",
+        "file.h": "c",
+        "defs.h": "c"
+    }
+}

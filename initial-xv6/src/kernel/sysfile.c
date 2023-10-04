@@ -68,6 +68,8 @@ sys_dup(void)
 uint64
 sys_read(void)
 {
+  READCOUNT++;
+  // printf("READCOUNT: %d\n", READCOUNT);
   struct file *f;
   int n;
   uint64 p;
