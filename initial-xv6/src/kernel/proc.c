@@ -135,7 +135,7 @@ found:
     return 0;
   }
   if((p->backup_trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
+    // freeproc(p);
     release(&p->lock);
     return 0;
   }
@@ -177,8 +177,7 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
-  if (p->backup_trapframe)
-    kfree((void *)p->backup_trapframe);
+
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
