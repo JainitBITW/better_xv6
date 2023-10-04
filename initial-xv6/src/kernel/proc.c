@@ -5,6 +5,14 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+// #include "types.h"
+// #include "param.h"
+// #include "memlayout.h"
+// #include "riscv.h"
+// #include "spinlock.h"
+// #include "proc.h"
+// #include "defs.h"
+
 
 struct cpu cpus[NCPU];
 
@@ -498,24 +506,56 @@ void scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for (p = proc; p < &proc[NPROC]; p++)
-    {
-      acquire(&p->lock);
-      if (p->state == RUNNABLE)
-      {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+//     for (p = proc; p < &proc[NPROC]; p++)
+//     {
+//       acquire(&p->lock);
+//       if (p->state == RUNNABLE)
+//       {
+//         // Switch to chosen process.  It is the process's job
+//         // to release its lock and then reacquire it
+//         // before jumping back to us.
+//         p->state = RUNNING;
+//         c->proc = p;
+//         swtch(&c->context, &p->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-      }
-      release(&p->lock);
-    }
+//         // Process is done running for now.
+//         // It should have changed its p->state before coming back.
+//         c->proc = 0;
+//       }
+//       release(&p->lock);
+//     }
+//   }
+//get the proc with minimum ctime 
+	int min_ctime = ticks;
+	struct proc *min_proc = 0;
+	for (p = proc; p < &proc[NPROC]; p++)
+	{
+	  acquire(&p->lock);
+	  if (p->state == RUNNABLE && p->ctime < min_ctime)
+	  {
+		min_ctime = p->ctime;
+		min_proc = p;
+	  }
+	  release(&p->lock);
+	}
+	if (min_proc != 0)
+	{
+	  acquire(&min_proc->lock);
+	  if (min_proc->state == RUNNABLE)
+	  {
+		// Switch to chosen process.  It is the process's job
+		// to release its lock and then reacquire it
+		// before jumping back to us.
+		min_proc->state = RUNNING;
+		c->proc = min_proc;
+		swtch(&c->context, &min_proc->context);
+
+		// Process is done running for now.
+		// It should have changed its p->state before coming back.
+		c->proc = 0;
+	  }
+	  release(&min_proc->lock);
+	}
   }
 }
 
