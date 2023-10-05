@@ -33,6 +33,8 @@ OBJS = \
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
 #TOOLPREFIX = 
+# defining schedular type
+
 
 # Try to infer the correct TOOLPREFIX if not set
 ifndef TOOLPREFIX
