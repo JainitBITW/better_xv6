@@ -119,5 +119,5 @@ void restore(){
 uint64 sys_sigreturn(void){
   restore();
   myproc()->is_sigalarm = 0;
-  return 0;
+  return myproc()->trapframe->a0;
 }
