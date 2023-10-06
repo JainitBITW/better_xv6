@@ -124,6 +124,7 @@ struct proc
   int now_ticks; 
   uint64 handler; 
   struct trapframe *backup_trapframe;
+  int queue_no; 
 };
 
 extern struct proc proc[NPROC];

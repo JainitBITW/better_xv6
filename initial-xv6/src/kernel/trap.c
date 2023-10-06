@@ -82,6 +82,8 @@ void usertrap(void)
 	if (which_dev == 2)
 	{
 		p->now_ticks+=1 ;
+printf("proc %d , cpu %d , ctime %d\n",myproc()->pid,cpuid(),myproc()->ctime); 
+
 		if( p-> ticks > 0 && p->now_ticks >= p->ticks && !p->is_sigalarm)
 		{
 			p->now_ticks = 0;
@@ -165,6 +167,7 @@ void kerneltrap()
 	}
 
 	// give up the CPU if this is a timer interrupt.
+	
 #ifdef RR
 	if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
 		yield();

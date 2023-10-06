@@ -532,6 +532,7 @@ void scheduler(void)
 			}
 		}
 #endif
+//copilot code
 #ifdef FCFS
 		// find the process with minimum ctime
 		struct proc* min_p = 0;
@@ -566,6 +567,7 @@ void scheduler(void)
 		}
 #endif
 	}
+
 }
 
 // Switch to scheduler.  Must hold only p->lock
@@ -777,7 +779,7 @@ void procdump(void)
 			state = "???";
 		printf("%d %s %s", p->pid, state, p->name);
 		printf("\n");
-	}
+	}	
 }
 
 // waitx
