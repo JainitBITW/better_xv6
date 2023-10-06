@@ -28,9 +28,11 @@ int main()
         {
         } // CPU bound process
       }
+
       // printf("Process %d finished\n", n);
       exit(0);
     }
+    
   }
   for (; n > 0; n--)
   {

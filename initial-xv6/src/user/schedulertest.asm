@@ -39,10 +39,10 @@ int main()
   26:	4901                	li	s2,0
   28:	4981                	li	s3,0
   2a:	a8b5                	j	a6 <main+0xa6>
-      }
       // printf("Process %d finished\n", n);
       exit(0);
     }
+    
   }
   for (; n > 0; n--)
   2c:	fe904de3          	bgtz	s1,26 <main+0x26>

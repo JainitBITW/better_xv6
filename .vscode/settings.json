@@ -6,6 +6,7 @@
         "fcntl.h": "c",
         "sleeplock.h": "c",
         "file.h": "c",
-        "defs.h": "c"
+        "defs.h": "c",
+        "locale": "c"
     }
 }

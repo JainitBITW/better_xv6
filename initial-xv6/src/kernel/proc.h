@@ -1,7 +1,5 @@
 // Saved registers for kernel context switches.
-#define MAX_QUEUE_SIZE 50
-#define AGE_LOL 30
-#define NUM_OF_QUEUES 4
+
 struct context
 {
   uint64 ra;
@@ -135,11 +133,5 @@ struct proc
 
 };
 
-struct queue
-{
-  struct proc *arr[MAX_QUEUE_SIZE];
-  int queue_size;
-};
 
-struct queue queues[NUM_OF_QUEUES];
 extern struct proc proc[NPROC];

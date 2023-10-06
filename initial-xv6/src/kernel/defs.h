@@ -191,3 +191,15 @@ void            update_time(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+#define MAX_QUEUE_SIZE 50
+#define AGE_LOL 30
+#define NUM_OF_QUEUES 4
+
+struct queue
+{
+  struct proc *arr[MAX_QUEUE_SIZE];
+  int queue_size;
+};
+
+extern struct queue queues[NUM_OF_QUEUES];
