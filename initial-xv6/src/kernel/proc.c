@@ -54,7 +54,16 @@ void proc_mapstacks(pagetable_t kpgtbl)
 void procinit(void)
 {
 	struct proc* p;
-
+	#ifdef MLFQ 
+	int i ; 
+	for(i=0;i<NUM_OF_QUEUES;i++)
+	{
+		//check if queue exists 
+		
+		queues[i].queue_size = 0 ; 
+		queues[i].arr[0] = 0 ;
+	}
+	#endif
 	initlock(&pid_lock, "nextpid");
 	initlock(&wait_lock, "wait_lock");
 	for(p = proc; p < &proc[NPROC]; p++)
@@ -63,6 +72,8 @@ void procinit(void)
 		p->state = UNUSED;
 		p->kstack = KSTACK((int)(p - proc));
 	}
+
+
 }
 
 // Must be called with interrupts disabled,
@@ -125,6 +136,11 @@ static struct proc* allocproc(void)
 			release(&p->lock);
 		}
 	}
+	#ifdef MLFQ
+	int new_process_idx = queues[0].queue_size;
+	queues[0].arr[new_process_idx] = p;
+	queues[0].queue_size++;
+	#endif
 	return 0;
 
 found:
@@ -166,7 +182,9 @@ found:
 	p->ticks = 0;
 	p->now_ticks = 0;
 	p->handler = 0;
-
+	p->sched_count = 0;
+	p->start_time = 0 ;
+	p->queue_no = 0 ; 
 	return p;
 }
 
@@ -190,6 +208,8 @@ static void freeproc(struct proc* p)
 	p->killed = 0;
 	p->xstate = 0;
 	p->state = UNUSED;
+	p->sched_count = 0;
+	p->start_time = 0 ;
 }
 
 uint64 sys_sigalarm(void)

@@ -1,4 +1,7 @@
 // Saved registers for kernel context switches.
+#define MAX_QUEUE_SIZE 50
+#define AGE_LOL 30
+#define NUM_OF_QUEUES 4
 struct context
 {
   uint64 ra;
@@ -120,11 +123,23 @@ struct proc
   uint ctime;                  // When was the process created
   uint etime;                  // When did the process exited
   int is_sigalarm ; 
+  uint start_time; 
+  int sched_count;
   int ticks; 
   int now_ticks; 
   uint64 handler; 
   struct trapframe *backup_trapframe;
-  int queue_no; 
+  int queue_no ; 
+  int time_spent[4];
+  uint age; 
+
 };
 
+struct queue
+{
+  struct proc *arr[MAX_QUEUE_SIZE];
+  int queue_size;
+};
+
+struct queue queues[NUM_OF_QUEUES];
 extern struct proc proc[NPROC];
