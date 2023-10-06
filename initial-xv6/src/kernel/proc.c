@@ -13,11 +13,11 @@
 // #include "proc.h"
 // #include "defs.h"
 
-struct queue queues[NUM_OF_QUEUES];
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+struct queue queues[NUM_OF_QUEUES];
 struct proc* initproc;
 
 int nextpid = 1;
@@ -116,7 +116,31 @@ int allocpid()
 
 	return pid;
 }
+//copilot 
+void
+queue_remove(int proc_idx, int queue_no)
+{
+	int i;
+	for(i = proc_idx; i < queues[queue_no].queue_size - 1; i++)
+	{
+		queues[queue_no].arr[i] = queues[queue_no].arr[i + 1];
+	}
+	queues[queue_no].queue_size--;
+}
+//copilot 
+void
+queue_add(struct proc* p, int queue_no)
+{
 
+	int new_process_idx = queues[queue_no].queue_size;
+	queues[queue_no].arr[new_process_idx] = p;
+	queues[queue_no].queue_size++;
+	
+	p->q_run_time = 0;
+	p->q_wait_time = 0;
+	p->queue_no = queue_no;
+
+}
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
@@ -168,11 +192,7 @@ found:
 
 	// Set up new context to start executing at forkret,
 	// which returns to user space.
-	#ifdef MLFQ
-	int new_process_idx = queues[0].queue_size;
-	queues[0].arr[new_process_idx] = p;
-	queues[0].queue_size++;
-	#endif
+	
 	memset(&p->context, 0, sizeof(p->context));
 	p->context.ra = (uint64)forkret;
 	p->context.sp = p->kstack + PGSIZE;
@@ -183,13 +203,17 @@ found:
 	p->ticks = 0;
 	p->now_ticks = 0;
 	p->handler = 0;
-	p->sched_count = 0;
+	
 	p->start_time = 0 ;
-	#ifdef MLFQ
-	p->queue_no = 0 ; 
-	queues[0].arr[queues[0].queue_size] = p;
-	queues[0].queue_size++;
-	#endif
+	p->q_wait_time = 0;
+	p->q_run_time = 0;
+	p->q_leap = 0;
+	
+	for (int i = 0; i < NUM_OF_QUEUES; i++)
+	{
+		p->time_spent[i] = 0;
+	}
+
 	return p;
 }
 
@@ -200,9 +224,13 @@ static void freeproc(struct proc* p)
 {
 	if(p->backup_trapframe)
 		kfree((void*)p->backup_trapframe);
+	if(p->trapframe)
+		kfree((void*)p->trapframe);
+	
 	p->trapframe = 0;
 	if(p->pagetable)
 		proc_freepagetable(p->pagetable, p->sz);
+	
 
 	p->pagetable = 0;
 	p->sz = 0;
@@ -213,8 +241,14 @@ static void freeproc(struct proc* p)
 	p->killed = 0;
 	p->xstate = 0;
 	p->state = UNUSED;
-	p->sched_count = 0;
+	
 	p->start_time = 0 ;
+		p->queue_no = 0;
+	//Time spent in each queue
+	for (int i = 0; i < NUM_OF_QUEUES; i++)
+	{
+		p->time_spent[i] = 0;
+	}
 }
 
 uint64 sys_sigalarm(void)
@@ -230,6 +264,7 @@ uint64 sys_sigalarm(void)
 	myproc()->now_ticks = 0;
 	myproc()->handler = handler;
 	// *(  myproc()->backup_trapframe )=*( myproc()->trapframe);
+	// jainit bafna iiith cop
 
 	return 0;
 }
@@ -307,6 +342,9 @@ void userinit(void)
 	p->state = RUNNABLE;
 
 	release(&p->lock);
+	#ifdef MLFQ
+	queue_add(p, 0);
+	#endif
 }
 
 // Grow or shrink user memory by n bytes.
@@ -380,6 +418,14 @@ int fork(void)
 	acquire(&np->lock);
 	np->state = RUNNABLE;
 	release(&np->lock);
+	#ifdef MLFQ
+	queue_add(np, 0);
+	if(p!= 0&&p->queue_no>0 )
+	{
+			yield();	
+	}
+	#endif
+
 
 	return pid;
 }
@@ -508,25 +554,7 @@ int wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
-//copilot 
-void
-queue_remove(int proc_idx, int queue_no)
-{
-	int i;
-	for(i = proc_idx; i < queues[queue_no].queue_size - 1; i++)
-	{
-		queues[queue_no].arr[i] = queues[queue_no].arr[i + 1];
-	}
-	queues[queue_no].queue_size--;
-}
-//copilot 
-void
-queue_add(struct proc* p, int queue_no)
-{
-	int new_process_idx = queues[queue_no].queue_size;
-	queues[queue_no].arr[new_process_idx] = p;
-	queues[queue_no].queue_size++;
-}
+
 void scheduler(void)
 {
 
@@ -539,6 +567,7 @@ void scheduler(void)
 		// Avoid deadlock by ensuring that devices can interrupt.
 		intr_on();
 #ifdef RR
+struct proc* p;
 		for(p = proc; p < &proc[NPROC]; p++)
 		{
 
@@ -580,6 +609,7 @@ void scheduler(void)
 //copilot code
 #ifdef FCFS
 		// find the process with minimum ctime
+		struct proc* p;
 		struct proc* min_p = 0;
 		int min_ctime = 0x7fffffff;
 		for(p = proc; p < &proc[NPROC]; p++)
@@ -614,6 +644,32 @@ void scheduler(void)
 #ifdef MLFQ
 struct proc* executable =0;
 		int i;
+
+		// First DO AGING
+		for(i= 1 ; i<NUM_OF_QUEUES;i++)
+		{
+			for (int j = 0; j < queues[i].queue_size; j++)
+			{
+				acquire(&queues[i].arr[j]->lock);
+				struct proc* temp = queues[i].arr[j] ; 
+				if( temp->q_wait_time >= AGE_MAX  && i>0 )
+				{
+					queue_remove(j,i);
+					queue_add(temp,i-1);
+					
+					// printf("process %d is aging from queue %d to queue %d\n",temp->pid,i,i-1);
+					
+					j--;
+				}
+				
+					release(&temp->lock);
+				
+				
+			}
+		}
+
+
+
 		for(i=0;i<NUM_OF_QUEUES;i++)
 		{
 			if(queues[i].queue_size>0)
@@ -626,13 +682,13 @@ struct proc* executable =0;
 					if( queues[i].arr[j]->state == RUNNABLE)
 					{
 						executable = temp;
-						queue_remove(j,i);
-						printf("process %d is running in queue %d\n",temp->pid,i);
-						release(&queues[i].arr[j]->lock);
+						queue_remove(j,i); // we are removiing so that it can be added to the end of the queue or removed permanently
+						// printf("process %d is running in queue %d\n",temp->pid,i);
+						// release(&queues[i].arr[j]->lock);
 						break;
 					}
-					release(&queues[i].arr[j]->lock);
-			}
+					release(&temp->lock);
+				}
 			if (executable != 0)
 			{
 				break;
@@ -641,19 +697,33 @@ struct proc* executable =0;
 		}
 		if(executable != 0)
 		{
-			acquire(&executable->lock);
+			// acquire(&executable->lock);
 			if(executable->state == RUNNABLE)
 			{
 				// Switch to chosen process.  It is the process's job
 				// to release its lock and then reacquire it
 				// before jumping back to us.
 				executable->state = RUNNING;
+				executable->q_wait_time = 0;
 				c->proc = executable;
 				swtch(&c->context, &executable->context);
 
 				// Process is done running for now.
 				// It should have changed its p->state before coming back.
 				c->proc = 0;
+
+				if(executable-> state == RUNNABLE)
+				{
+					if(executable->q_leap == 1)
+					{
+						if(executable->queue_no != NUM_OF_QUEUES - 1)
+						{
+							executable->queue_no++;
+						}
+						executable->q_leap = 0;
+				}
+				queue_add(executable, executable->queue_no);
+				}
 			}
 			release(&executable->lock);
 		}
@@ -768,6 +838,9 @@ void wakeup(void* chan)
 			if(p->state == SLEEPING && p->chan == chan)
 			{
 				p->state = RUNNABLE;
+				#ifdef MLFQ
+				queue_add(p, p->queue_no);
+				#endif
 			}
 			release(&p->lock);
 		}
@@ -791,6 +864,9 @@ int kill(int pid)
 			{
 				// Wake process from sleep().
 				p->state = RUNNABLE;
+				#ifdef MLFQ
+          queue_add(p, p->queue_no);
+        #endif
 			}
 			release(&p->lock);
 			return 0;
@@ -874,7 +950,22 @@ void procdump(void)
 			state = states[p->state];
 		else
 			state = "???";
-		printf("%d %s %s", p->pid, state, p->name);
+		#ifdef MLFQ
+		printf("\tq0\tq1\tq2\tq3\tq4");
+		#endif
+		 printf("%d\t", p->pid);
+		 #if SCHEDULER==3
+      int priority=p->curr_queue;
+      if(p->state==ZOMBIE)
+        priority = -1;
+      printf("%d\t\t", priority);
+    #endif
+	printf("%s\t", state);
+	 #if SCHEDULER==3
+    for(int x=0;x<NUM_OF_QUEUES;x++)
+    printf("%d\t", p->time_spent_queues[x]);
+    #endif
+		// printf("%d %s %s", p->pid, state, p->name);
 		printf("\n");
 	}	
 }
@@ -944,7 +1035,42 @@ void update_time()
 		{
 			p->rtime++;
 		}
+		 	release(&p->lock);
+	}
+	
+}
+
+void set_overshot_proc()
+{
+	struct proc* p = myproc();
+	
+		acquire(&p->lock);
+		
+			p->q_leap = 1;
+	p->q_run_time = 0;
+	p->q_wait_time = 0;
+		release(&p->lock);
+	
+}
+
+void update_q_wtime()
+{
+	struct proc* p;
+	for(p = proc; p < &proc[NPROC]; p++)
+	{
+		acquire(&p->lock);
+		if (p->state == RUNNING)
+		{
+			p->q_run_time++;
+		}
+		else  if(p->state == RUNNABLE)
+		{
+			p->q_wait_time++;
+		}
+		 if (p->state != ZOMBIE)
+		 {
+			 p->time_spent[p->queue_no]++;
+		 }
 		release(&p->lock);
 	}
 }
-

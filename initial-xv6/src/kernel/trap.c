@@ -82,7 +82,7 @@ void usertrap(void)
 	if (which_dev == 2)
 	{
 		p->now_ticks+=1 ;
-printf("proc %d , cpu %d , ctime %d\n",myproc()->pid,cpuid(),myproc()->ctime); 
+// printf("proc %d , cpu %d , ctime %d\n",myproc()->pid,cpuid(),myproc()->ctime); 
 
 		if( p-> ticks > 0 && p->now_ticks >= p->ticks && !p->is_sigalarm)
 		{
@@ -94,6 +94,35 @@ printf("proc %d , cpu %d , ctime %d\n",myproc()->pid,cpuid(),myproc()->ctime);
 		}
 #ifdef RR
 		yield();
+#endif
+#ifdef MLFQ
+// For priority 0: 1 timer tick
+// For priority 1: 3 timer ticks
+// For priority 2: 9 timer ticks
+// For priority 3: 15 timer ticks
+int max_ticks_for_queue = 15;
+switch (myproc()->queue_no)
+{
+case 0:
+	max_ticks_for_queue = 1;
+	break;
+case 1:
+	max_ticks_for_queue = 3;
+	break;
+case 2:
+	max_ticks_for_queue = 9;
+	break;
+case 3:
+	max_ticks_for_queue = 15;
+	break;
+
+default:
+	break;
+}
+if ( myproc()->q_run_time >= max_ticks_for_queue){
+	set_overshot_proc();
+	yield();
+}
 #endif
 	}
 
@@ -172,6 +201,35 @@ void kerneltrap()
 	if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
 		yield();
 #endif
+#ifdef MLFQ
+if(which_dev == 2  && myproc()!=0  && myproc()->state == RUNNING)
+{int max_ticks_for_queue = 15;
+switch (myproc()->queue_no)
+{
+case 0:
+	max_ticks_for_queue = 1;
+	break;
+case 1:
+	max_ticks_for_queue = 3;
+	break;
+case 2:
+	max_ticks_for_queue = 9;
+	break;
+case 3:
+	max_ticks_for_queue = 15;
+	break;
+
+default:
+	break;
+}
+if ( myproc()->q_run_time >= max_ticks_for_queue){
+	// printf("Overshot process %d becuase of ticks %d\n",myproc()->pid,myproc()->q_run_time);
+	set_overshot_proc();
+	yield();
+}
+
+}
+#endif
 	// the yield() may have caused some traps to occur,
 	// so restore trap registers for use by kernelvec.S's sepc instruction.
 	w_sepc(sepc);
@@ -180,9 +238,14 @@ void kerneltrap()
 
 void clockintr()
 {
+	
+
 	acquire(&tickslock);
 	ticks++;
 	update_time();
+	#ifdef MLFQ
+	update_q_wtime();
+	#endif
 	// for (struct proc *p = proc; p < &proc[NPROC]; p++)
 	// {
 	//   acquire(&p->lock);
@@ -198,6 +261,7 @@ void clockintr()
 	//   release(&p->lock);
 	// }
 	wakeup(&ticks);
+	// procdump();
 	release(&tickslock);
 }
 

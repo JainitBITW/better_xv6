@@ -122,7 +122,7 @@ struct proc
   uint etime;                  // When did the process exited
   int is_sigalarm ; 
   uint start_time; 
-  int sched_count;
+ 
   int ticks; 
   int now_ticks; 
   uint64 handler; 
@@ -130,6 +130,9 @@ struct proc
   int queue_no ; 
   int time_spent[4];
   uint age; 
+  uint q_wait_time; 
+  uint q_run_time;
+  int q_leap; 
 
 };
 

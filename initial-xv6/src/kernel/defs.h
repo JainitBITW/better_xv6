@@ -188,12 +188,15 @@ void            virtio_disk_intr(void);
 // waitx
 int             waitx(uint64, uint*, uint*);
 void            update_time(void);
+void            update_q_wtime(void);
+void            set_overshot_proc();
+
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
-#define MAX_QUEUE_SIZE 50
-#define AGE_LOL 30
+#define MAX_QUEUE_SIZE 100
+#define AGE_MAX 50
 #define NUM_OF_QUEUES 4
 
 struct queue
