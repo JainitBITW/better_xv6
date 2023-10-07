@@ -19,44 +19,59 @@ int getGameResult(int decisionA, int decisionB) {
 }
 
 int main() {
-    int server_socket;
-    struct sockaddr_in server_addr, client_addrA, client_addrB;
-    socklen_t client_addr_lenA = sizeof(client_addrA);
-    socklen_t client_addr_lenB = sizeof(client_addrB);
+    int server_socketA, server_socketB;
+    struct sockaddr_in server_addrA, server_addrB, client_addrA, client_addrB;
+    socklen_t client_addr_lenA = sizeof(struct sockaddr_in);
+    socklen_t client_addr_lenB = sizeof(struct sockaddr_in);
     char bufferA[1024], bufferB[1024];
 
-    // Create UDP socket
-    server_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (server_socket == -1) {
-        perror("Socket creation error");
+    // Create UDP sockets for clients A and B
+    server_socketA = socket(AF_INET, SOCK_DGRAM, 0);
+    if (server_socketA == -1) {
+        perror("Socket creation error for clientA");
         exit(EXIT_FAILURE);
     }
 
-    // Server address configuration
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(4546); // Server listens on port 4546
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_socketB = socket(AF_INET, SOCK_DGRAM, 0);
+    if (server_socketB == -1) {
+        perror("Socket creation error for clientB");
+        exit(EXIT_FAILURE);
+    }
 
-    // Bind the socket to the server address
-    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("Bind error");
+    // Server addresses configuration for clients A and B
+    server_addrA.sin_family = AF_INET;
+    server_addrA.sin_port = htons(4546); // Server for client A listens on port 4546
+    server_addrA.sin_addr.s_addr = INADDR_ANY;
+
+    server_addrB.sin_family = AF_INET;
+    server_addrB.sin_port = htons(4547); // Server for client B listens on port 4547
+    server_addrB.sin_addr.s_addr = INADDR_ANY;
+
+    // Bind the sockets to the respective server addresses
+    if (bind(server_socketA, (struct sockaddr *)&server_addrA, sizeof(server_addrA)) == -1) {
+        perror("Bind error for clientA");
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(server_socketB, (struct sockaddr *)&server_addrB, sizeof(server_addrB)) == -1) {
+        perror("Bind error for clientB");
         exit(EXIT_FAILURE);
     }
 
     printf("Server is listening for clients...\n");
 
     while (1) {
-        // Receive decisions from clientA
+        // Receive decisions from client A
         memset(bufferA, 0, sizeof(bufferA));
-        int recvA = recvfrom(server_socket, bufferA, sizeof(bufferA), 0, (struct sockaddr *)&client_addrA, &client_addr_lenA);
+        int recvA = recvfrom(server_socketA, bufferA, sizeof(bufferA), 0, (struct sockaddr *)&client_addrA, &client_addr_lenA);
         if (recvA == -1) {
             perror("Receive error for clientA");
             exit(EXIT_FAILURE);
         }
 
-        // Receive decisions from clientB
+        // Receive decisions from client B
         memset(bufferB, 0, sizeof(bufferB));
-        int recvB = recvfrom(server_socket, bufferB, sizeof(bufferB), 0, (struct sockaddr *)&client_addrB, &client_addr_lenB);
+        int recvB = recvfrom(server_socketB, bufferB, sizeof(bufferB), 0, (struct sockaddr *)&client_addrB, &client_addr_lenB);
         if (recvB == -1) {
             perror("Receive error for clientB");
             exit(EXIT_FAILURE);
@@ -79,47 +94,52 @@ int main() {
             strcpy(resultB, "Win");
         }
 
-        // Send results to clients
-        sendto(server_socket, resultA, strlen(resultA), 0, (struct sockaddr *)&client_addrA, client_addr_lenA);
-        sendto(server_socket, resultB, strlen(resultB), 0, (struct sockaddr *)&client_addrB, client_addr_lenB);
+        // Send results to client A and client B
+        sendto(server_socketA, resultA, strlen(resultA), 0, (struct sockaddr *)&client_addrA, client_addr_lenA);
+        sendto(server_socketB, resultB, strlen(resultB), 0, (struct sockaddr *)&client_addrB, client_addr_lenB);
 
-        // Receive "play again" response from clients
+        // Receive play again decision from client A
         memset(bufferA, 0, sizeof(bufferA));
-        memset(bufferB, 0, sizeof(bufferB));
-        int recvPlayAgainA = recvfrom(server_socket, bufferA, sizeof(bufferA), 0, (struct sockaddr *)&client_addrA, &client_addr_lenA);
-        int recvPlayAgainB = recvfrom(server_socket, bufferB, sizeof(bufferB), 0, (struct sockaddr *)&client_addrB, &client_addr_lenB);
-
-        if (recvPlayAgainA == -1 || recvPlayAgainB == -1) {
-            perror("Receive error for play again response");
+        recvA = recvfrom(server_socketA, bufferA, sizeof(bufferA), 0, (struct sockaddr *)&client_addrA, &client_addr_lenA);
+        if (recvA == -1) {
+            perror("Receive error for clientA");
             exit(EXIT_FAILURE);
         }
-
-        // Check if both players want to play again
-        if (strcmp(bufferA, "no") == 0 || strcmp(bufferB, "no") == 0) {
-            printf("At least one player doesn't want to play again. Exiting the game.\n");
-            if (strcmp(bufferA, "no") == 0) {
-                printf("ClientA disconnected.\n");
-            }
-            if (strcmp(bufferB, "no") == 0) {
-                printf("ClientB disconnected.\n");
-            }
-            if(strcmp(bufferA,"yes") == 0){
-                sendto(server_socket, "exit", strlen("exit"), 0, (struct sockaddr *)&client_addrA, client_addr_lenA);
-            }
-            if(strcmp(bufferB,"yes") == 0){
-                sendto(server_socket, "exit", strlen("exit"), 0, (struct sockaddr *)&client_addrB, client_addr_lenB);
-            }
-            break;
+        recvB = recvfrom(server_socketB, bufferB, sizeof(bufferB), 0, (struct sockaddr *)&client_addrB, &client_addr_lenB);
+        if (recvB == -1) {
+            perror("Receive error for clientB");
+            exit(EXIT_FAILURE);
         }
-        else{
-            sendto(server_socket, "continue", strlen("continue"), 0, (struct sockaddr *)&client_addrA, client_addr_lenA);
-            sendto(server_socket, "continue", strlen("continue"), 0, (struct sockaddr *)&client_addrB, client_addr_lenB);
+        if(strcmp(bufferA, "yes")==0)
+          {
+            sendto(server_socketB, "yes", strlen("yes"), 0, (struct sockaddr *)&client_addrB, client_addr_lenB);
+
+        }
+        else
+        {
+            sendto(server_socketB, "no", strlen("no"), 0, (struct sockaddr *)&client_addrB, client_addr_lenB);
+        }
+        if(strcmp(bufferB, "yes")==0)
+         {
+            sendto(server_socketA, "yes", strlen("yes"), 0, (struct sockaddr *)&client_addrA, client_addr_lenA);
+
+        }
+        else
+        {
+            sendto(server_socketA, "no", strlen("no"), 0, (struct sockaddr *)&client_addrA, client_addr_lenA);
+        }
+      
+        if( (strcmp(bufferA, "no")==0) || (strcmp(bufferB, "no")==0) )
+        {
+            printf("Server closed the connection. BYE BYE\n");
+            break;
         }
 
     }
 
-    // Close the socket
-    close(server_socket);
+    // Close the sockets
+    close(server_socketA);
+    close(server_socketB);
 
     return 0;
 }

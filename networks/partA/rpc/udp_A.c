@@ -1,9 +1,9 @@
-#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 int main() {
     int client_socket;
@@ -40,10 +40,7 @@ int main() {
 
         // Send the decision to the server
         sprintf(buffer, "%d", decision);
-        if (sendto(client_socket, buffer, strlen(buffer), 0, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-            perror("Sendto error");
-            exit(EXIT_FAILURE);
-        }
+        sendto(client_socket, buffer, strlen(buffer), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
         // Receive the result from the server
         memset(buffer, 0, sizeof(buffer));
@@ -71,13 +68,27 @@ int main() {
         if (strcmp(playAgain, "no") == 0) {
             break;
         }
-        if( recvfrom(client_socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&server_addr, &server_addr_len) == -1) {
-            perror("Receive error");
-            exit(EXIT_FAILURE);
-        }
-        if(strcmp(buffer, "exit") == 0) {
-            printf("Server closed the connection.\n");
-            break;
+        else
+        {
+            //get new message whether the other player is playing  or not 
+            char OplayAgain[10];
+            memset(OplayAgain, 0, sizeof(OplayAgain));
+            int recv_result = recvfrom(client_socket, OplayAgain, sizeof(OplayAgain), 0, (struct sockaddr*)&server_addr, &server_addr_len);
+            if (recv_result <= 0) {
+                if (recv_result == 0) {
+                    printf("Server closed the connection.\n");
+                } else {
+                    perror("Receive error");
+                }
+                break; // Exit the loop when the server closes the connection or an error occurs.
+            }
+            printf("OplayAgain: %s\n", OplayAgain);
+            if(strcmp(OplayAgain, "no")==0)
+            {
+                printf("Server closed the connection. BYE BYE\n");
+                break;
+            }
+            
         }
     }
 

@@ -7,6 +7,8 @@
         "sleeplock.h": "c",
         "file.h": "c",
         "defs.h": "c",
-        "locale": "c"
+        "locale": "c",
+        "thread": "c",
+        "param.h": "c"
     }
 }
