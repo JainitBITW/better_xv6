@@ -5856,9 +5856,9 @@ void set_overshot_proc()
     80002b04:	6105                	addi	sp,sp,32
     80002b06:	8082                	ret
 
-0000000080002b08 <update_q_wtime>:
+0000000080002b08 <update_q_time>:
 
-void update_q_wtime()
+void update_q_time()
 {
     80002b08:	7139                	addi	sp,sp,-64
     80002b0a:	fc06                	sd	ra,56(sp)
@@ -5890,7 +5890,7 @@ void update_q_wtime()
 	for(p = proc; p < &proc[NPROC]; p++)
     80002b28:	00016917          	auipc	s2,0x16
     80002b2c:	12890913          	addi	s2,s2,296 # 80018c50 <tickslock>
-    80002b30:	a805                	j	80002b60 <update_q_wtime+0x58>
+    80002b30:	a805                	j	80002b60 <update_q_time+0x58>
 			p->q_run_time++;
     80002b32:	1b44a783          	lw	a5,436(s1)
     80002b36:	2785                	addiw	a5,a5,1
@@ -5910,24 +5910,24 @@ void update_q_wtime()
     80002b54:	136080e7          	jalr	310(ra) # 80000c86 <release>
 	for(p = proc; p < &proc[NPROC]; p++)
     80002b58:	1c048493          	addi	s1,s1,448
-    80002b5c:	03248563          	beq	s1,s2,80002b86 <update_q_wtime+0x7e>
+    80002b5c:	03248563          	beq	s1,s2,80002b86 <update_q_time+0x7e>
 		acquire(&p->lock);
     80002b60:	8526                	mv	a0,s1
     80002b62:	ffffe097          	auipc	ra,0xffffe
     80002b66:	070080e7          	jalr	112(ra) # 80000bd2 <acquire>
 		if (p->state == RUNNING)
     80002b6a:	4c9c                	lw	a5,24(s1)
-    80002b6c:	fd3783e3          	beq	a5,s3,80002b32 <update_q_wtime+0x2a>
+    80002b6c:	fd3783e3          	beq	a5,s3,80002b32 <update_q_time+0x2a>
 		else  if(p->state == RUNNABLE)
-    80002b70:	01478563          	beq	a5,s4,80002b7a <update_q_wtime+0x72>
+    80002b70:	01478563          	beq	a5,s4,80002b7a <update_q_time+0x72>
 		 if (p->state != ZOMBIE)
-    80002b74:	fd578de3          	beq	a5,s5,80002b4e <update_q_wtime+0x46>
-    80002b78:	b7d1                	j	80002b3c <update_q_wtime+0x34>
+    80002b74:	fd578de3          	beq	a5,s5,80002b4e <update_q_time+0x46>
+    80002b78:	b7d1                	j	80002b3c <update_q_time+0x34>
 			p->q_wait_time++;
     80002b7a:	1b04a783          	lw	a5,432(s1)
     80002b7e:	2785                	addiw	a5,a5,1
     80002b80:	1af4a823          	sw	a5,432(s1)
-    80002b84:	bf65                	j	80002b3c <update_q_wtime+0x34>
+    80002b84:	bf65                	j	80002b3c <update_q_time+0x34>
 	}
     80002b86:	70e2                	ld	ra,56(sp)
     80002b88:	7442                	ld	s0,48(sp)
@@ -6151,9 +6151,9 @@ void clockintr()
     80002d04:	00000097          	auipc	ra,0x0
     80002d08:	d68080e7          	jalr	-664(ra) # 80002a6c <update_time>
 	#ifdef MLFQ
-	update_q_wtime();
+	update_q_time();
     80002d0c:	00000097          	auipc	ra,0x0
-    80002d10:	dfc080e7          	jalr	-516(ra) # 80002b08 <update_q_wtime>
+    80002d10:	dfc080e7          	jalr	-516(ra) # 80002b08 <update_q_time>
 	//   // {
 	//   //   p->wtime++;
 	//   // }

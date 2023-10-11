@@ -244,7 +244,7 @@ void clockintr()
 	ticks++;
 	update_time();
 	#ifdef MLFQ
-	update_q_wtime();
+	update_q_time();
 	#endif
 	// for (struct proc *p = proc; p < &proc[NPROC]; p++)
 	// {

@@ -188,7 +188,7 @@ void            virtio_disk_intr(void);
 // waitx
 int             waitx(uint64, uint*, uint*);
 void            update_time(void);
-void            update_q_wtime(void);
+void            update_q_time(void);
 void            set_overshot_proc();
 
 

@@ -9,6 +9,9 @@
         "defs.h": "c",
         "locale": "c",
         "thread": "c",
-        "param.h": "c"
+        "param.h": "c",
+        "socket.h": "c",
+        "headers.h": "c",
+        "stdio.h": "c"
     }
 }

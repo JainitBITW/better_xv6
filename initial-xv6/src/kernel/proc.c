@@ -1053,7 +1053,7 @@ void set_overshot_proc()
 	
 }
 
-void update_q_wtime()
+void update_q_time()
 {
 	struct proc* p;
 	for(p = proc; p < &proc[NPROC]; p++)
