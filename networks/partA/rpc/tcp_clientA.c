@@ -22,7 +22,7 @@ int main() {
     server_addr.sin_family = AF_INET;
 
     // Set the appropriate port for clientA or clientB
-    int server_port = 4545; // For clientA, use 12345; for clientB, use 12346
+    int server_port = 4547; // For clientA, use 12345; for clientB, use 12346
     server_addr.sin_port = htons(server_port);
     server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Replace with server IP
 
@@ -73,6 +73,22 @@ int main() {
 
         if (strcmp(playAgain, "no") == 0) {
             break;
+        }
+         else {
+            char pa[1024];
+            printf("Waiting for other player to decide...\n");
+           if(recv(client_socket, pa, sizeof(pa), 0) <= 0){
+               perror("Receive error");
+               break;
+           }
+                //   printf("Other player decided: %s\n", pa);
+            if( pa[0]=='n' && pa[1]=='o' ){
+                printf("Server closed the connection. BYE BYE\n");
+                break;
+            }
+           
+            
+
         }
     }
 

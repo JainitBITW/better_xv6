@@ -1,96 +1,88 @@
-#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <netinet/in.h>
 #include <unistd.h>
 
-// Function to determine the game result
-// 0 -> Rock (R) | 1 -> Paper (P) | 2 -> Scissors (S)
 int getGameResult(int decisionA, int decisionB) {
-    // for player A (clientA)
     if (decisionA == decisionB) {
-        return 0;
+        return 0; // Draw
     } else if ((decisionA == 0 && decisionB == 2) || (decisionA == 1 && decisionB == 0) || (decisionA == 2 && decisionB == 1)) {
-        return 1;
+        return 1; // Client A wins
     } else {
-        return -1;
+        return -1; // Client B wins
     }
 }
 
 int main() {
-    int server_socket, client_socketA, client_socketB;
-    struct sockaddr_in server_addr, client_addrA, client_addrB;
-    socklen_t client_addr_lenA = sizeof(client_addrA);
-    socklen_t client_addr_lenB = sizeof(client_addrB);
+    int server_socketA, server_socketB;
+    int client_socketA, client_socketB;
+    struct sockaddr_in server_addrA, server_addrB;
+    struct sockaddr_in client_addrA, client_addrB;
+    socklen_t client_addr_lenA = sizeof(struct sockaddr_in);
+    socklen_t client_addr_lenB = sizeof(struct sockaddr_in);
+
     char bufferA[1024], bufferB[1024];
 
-    // Create TCP socket
-    server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket == -1) {
+    // Create two TCP sockets, one for each client
+    server_socketA = socket(AF_INET, SOCK_STREAM, 0);
+    server_socketB = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (server_socketA == -1 || server_socketB == -1) {
         perror("Socket creation error");
         exit(EXIT_FAILURE);
     }
 
-    // Server address configuration
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(4546); // Server listens on port 4545
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    // Server address configuration for client A
+    server_addrA.sin_family = AF_INET;
+    server_addrA.sin_port = htons(4546); // Server for client A listens on port 4546
+    server_addrA.sin_addr.s_addr = INADDR_ANY;
 
-    // Bind the socket to the server address
-    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("Bind error");
+    // Server address configuration for client B
+    server_addrB.sin_family = AF_INET;
+    server_addrB.sin_port = htons(4547); // Server for client B listens on port 4547
+    server_addrB.sin_addr.s_addr = INADDR_ANY;
+
+    // Bind the sockets to their respective server addresses
+    if (bind(server_socketA, (struct sockaddr *)&server_addrA, sizeof(server_addrA)) == -1) {
+        perror("Bind error for client A");
         exit(EXIT_FAILURE);
     }
 
-    // Listen for incoming connections (maximum of 2 clients)
-    if (listen(server_socket, 2) == -1) {
+    if (bind(server_socketB, (struct sockaddr *)&server_addrB, sizeof(server_addrB)) == -1) {
+        perror("Bind error for client B");
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for incoming connections from clients A and B
+    if (listen(server_socketA, 1) == -1 || listen(server_socketB, 1) == -1) {
         perror("Listen error");
         exit(EXIT_FAILURE);
     }
 
     printf("Server is listening for clients...\n");
 
-    // Accept a connection from clientA
-    client_socketA = accept(server_socket, (struct sockaddr *)&client_addrA, &client_addr_lenA);
-    if (client_socketA == -1) {
-        perror("Accept error for clientA");
-        exit(EXIT_FAILURE);
-    }
+    // Accept connections from clients A and B
+    client_socketA = accept(server_socketA, (struct sockaddr *)&client_addrA, &client_addr_lenA);
+    client_socketB = accept(server_socketB, (struct sockaddr *)&client_addrB, &client_addr_lenB);
 
-    printf("ClientA connected...\n");
-
-    // Accept a connection from clientB
-    client_socketB = accept(server_socket, (struct sockaddr *)&client_addrB, &client_addr_lenB);
-    if (client_socketB == -1) {
-        perror("Accept error for clientB");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("ClientB connected...\n");
 
     while (1) {
-        // Receive decisions from clientA
+        // Receive decisions from client A
         memset(bufferA, 0, sizeof(bufferA));
         int recvA = recv(client_socketA, bufferA, sizeof(bufferA), 0);
         if (recvA == -1) {
             perror("Receive error for clientA");
             exit(EXIT_FAILURE);
-        } else if (recvA == 0) {
-            printf("ClientA disconnected.\n");
-            break; // Exit the loop if clientA disconnects
         }
 
-        // Receive decisions from clientB
+        // Receive decisions from client B
         memset(bufferB, 0, sizeof(bufferB));
         int recvB = recv(client_socketB, bufferB, sizeof(bufferB), 0);
         if (recvB == -1) {
             perror("Receive error for clientB");
             exit(EXIT_FAILURE);
-        } else if (recvB == 0) {
-            printf("ClientB disconnected.\n");
-            break; // Exit the loop if clientB disconnects
         }
 
         // Compare decisions and determine the result
@@ -110,26 +102,32 @@ int main() {
             strcpy(resultB, "Win");
         }
 
+        // Send results to client A and client B
         send(client_socketA, resultA, strlen(resultA), 0);
         send(client_socketB, resultB, strlen(resultB), 0);
 
-        // Prompt for another game
-        char playAgainA[10], playAgainB[10];
-        memset(playAgainA, 0, sizeof(playAgainA));
-        memset(playAgainB, 0, sizeof(playAgainB));
-
-        int recvPlayAgainA = recv(client_socketA, playAgainA, sizeof(playAgainA), 0);
-        if (recvPlayAgainA == -1) {
+        // Receive play again decision from client A
+        memset(bufferA, 0, sizeof(bufferA));
+        recvA = recv(client_socketA, bufferA, sizeof(bufferA), 0);
+        if (recvA == -1) {
             perror("Receive error for clientA");
             exit(EXIT_FAILURE);
         }
-        int recvPlayAgainB = recv(client_socketB, playAgainB, sizeof(playAgainB), 0);
-        if (recvPlayAgainB == -1) {
+
+        memset(bufferB, 0, sizeof(bufferB));
+        recvB = recv(client_socketB, bufferB, sizeof(bufferB), 0);
+        if (recvB == -1) {
             perror("Receive error for clientB");
             exit(EXIT_FAILURE);
         }
 
-        if (strcmp(playAgainA, "no\n") == 0 && strcmp(playAgainB, "no\n") == 0) {
+       //send them to the other player
+        send(client_socketA, bufferB, strlen(bufferB), 0);
+        send(client_socketB, bufferA, strlen(bufferA), 0);
+
+
+        if ((strcmp(bufferA, "no") == 0) || (strcmp(bufferB, "no") == 0)) {
+            printf("Server closed the connection. BYE BYE\n");
             break;
         }
     }
@@ -137,7 +135,9 @@ int main() {
     // Close the sockets
     close(client_socketA);
     close(client_socketB);
-    close(server_socket);
+    close(server_socketA);
+    close(server_socketB);
+    
 
     return 0;
 }

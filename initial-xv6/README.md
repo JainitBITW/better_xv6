@@ -86,9 +86,13 @@ prompt> ./test-getreadcounts.sh -s
 
 It's important to note that some variables and stack elements cannot be directly restored to the `trapframe`, as certain kernel stack and other elements are shared and used for various purposes.
 
+### FCFS Scheduler
+* For this scheduler, we iterate over the proc table, and select the process with the minimum `ctime`.
+* This value of `ctime` is set equal to number of ticks at the time of process creation, and thus, this is the time of creation of the process.
+* I acquire locks for every process that I check.
+* Also, I modified the file `kernel/trap.c` to disable processes being yeilded due to clock interrupts. Changes were made in the `kerneltrap` and the `usertrap` function.
+
 ### MLFQ Implementation 
-
-
 Implement a simplified preemptive MLFQ scheduler that allows processes to move between different priority queues based on their behavior and CPU bursts.
 
 *   If a process uses too much CPU time, it is pushed to a lower priority queue, leaving I/O bound and interactive processes in the higher priority queues.
@@ -122,3 +126,5 @@ Implement a simplified preemptive MLFQ scheduler that allows processes to move b
 * Now, after the process has finished running, I check for the `q_leap` flag, in which case I increase its queue number. Now, if the process is still runnable, then I insert it back into the queue according to its current queue_number.
 * Further, for processes that themselves relinquish control(for I/O, etc.), they go into the sleep state, and they are not **pushed back into the queue**. However, when the I/O stops, they reach the `wakeup` function, where they are added back into the queue they were previously in before going to sleep.
 * Further, after killing a process, I check if the process was in the RUNNABLE state, and if so, I remove it from the queue it was in.
+
+![Graph with aging 30 ](image.png)

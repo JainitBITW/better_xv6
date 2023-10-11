@@ -74,6 +74,23 @@ int main() {
         if (strcmp(playAgain, "no") == 0) {
             break;
         }
+         else {
+            char pa[1024];
+            printf("Waiting for other player to decide...\n");
+           if(recv(client_socket, pa, sizeof(pa), 0) <= 0){
+               perror("Receive error");
+               break;
+           }
+                //   printf("Other player decided: %s\n", pa);
+            if( pa[0]=='n' && pa[1]=='o' ){
+                printf("Server closed the connection. BYE BYE\n");
+                break;
+            }
+           
+            
+
+        }
+        
     }
 
     // Close the socket

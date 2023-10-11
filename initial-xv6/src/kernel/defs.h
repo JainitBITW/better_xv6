@@ -196,7 +196,7 @@ void            set_overshot_proc();
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
 #define MAX_QUEUE_SIZE 100
-#define AGE_MAX 50
+#define AGE_MAX 30
 #define NUM_OF_QUEUES 4
 
 struct queue

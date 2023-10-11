@@ -131,6 +131,7 @@ queue_remove(int proc_idx, int queue_no)
 void
 queue_add(struct proc* p, int queue_no)
 {
+	
 
 	int new_process_idx = queues[queue_no].queue_size;
 	queues[queue_no].arr[new_process_idx] = p;
@@ -932,40 +933,19 @@ int either_copyin(void* dst, int user_src, uint64 src, uint64 len)
 // No lock to avoid wedging a stuck machine further.
 void procdump(void)
 {
-	static char* states[] = {[UNUSED] "unused",
-							 [USED] "used",
-							 [SLEEPING] "sleep ",
-							 [RUNNABLE] "runble",
-							 [RUNNING] "run   ",
-							 [ZOMBIE] "zombie"};
+	
 	struct proc* p;
-	char* state;
+	
 
 	printf("\n");
 	for(p = proc; p < &proc[NPROC]; p++)
 	{
 		if(p->state == UNUSED)
 			continue;
-		if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
-			state = states[p->state];
-		else
-			state = "???";
+		
 		#ifdef MLFQ
-		printf("\tq0\tq1\tq2\tq3\tq4");
 		#endif
-		 printf("%d\t", p->pid);
-		 #if SCHEDULER==3
-      int priority=p->curr_queue;
-      if(p->state==ZOMBIE)
-        priority = -1;
-      printf("%d\t\t", priority);
-    #endif
-	printf("%s\t", state);
-	 #if SCHEDULER==3
-    for(int x=0;x<NUM_OF_QUEUES;x++)
-    printf("%d\t", p->time_spent_queues[x]);
-    #endif
-		// printf("%d %s %s", p->pid, state, p->name);
+		
 		printf("\n");
 	}	
 }
